@@ -29,7 +29,7 @@ def create_app(dataset_path=None, encoder=None):
     @app.post("/api/find", response_model=FindResponse)
     def find(req: FindRequest):
         candidates, status, count, reasons = filter_candidates(app.state.contractors, req)
-        ranked = app.state.ranker.rank_and_explain(candidates, req) if candidates else []
+        ranked = app.state.ranker.rank_and_explain(candidates, req)[:3] if candidates else []
         ranked = [{**c, "category": req.category} for c in ranked]
         return FindResponse(status=status, candidates=ranked,
                             excluded_count=count, excluded_reasons=reasons)

@@ -28,7 +28,8 @@ The supplied anonymized hackathon dataset is stored unchanged in
 `data/contractors.csv`: 66 rows, including 13 marked synthetic by the source.
 The response preserves synthetic, price_imputed and city_imputed flags.
 Imputed prices are described as estimates. Prices are starting prices, not final
-quotes. The default example returns five candidates and excludes five.
+quotes. The default example returns the top three of five eligible candidates
+and excludes five for failing the filters.
 
 Set `CONTRACTORS_PATH=/absolute/path/dataset.csv` to use a replacement with the
 same columns. Pipe-delimited categories, event_formats, languages and busy_dates

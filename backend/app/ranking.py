@@ -1,22 +1,15 @@
 """Initialize once at startup, then pass the filtered dataset to rank_and_explain."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 from functools import lru_cache
 from threading import RLock
 from typing import Any
 
 import numpy as np
 
+from app.models import FindRequest
+
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
-
-
-@dataclass(frozen=True)
-class FindRequest:
-    event_format: str
-    budget_kzt: int
-    language: str | None = None
-    duration_hours: float | None = None
 
 
 def _normalize(vectors):
@@ -77,7 +70,8 @@ def explain(c: dict, req: FindRequest) -> str:
     reasons = []
     price = c.get("price_from_kzt")
     if price is not None and price <= req.budget_kzt:
-        reasons.append(f"цена от {price:,} ₸ укладывается в бюджет {req.budget_kzt:,} ₸".replace(",", " "))
+        price_note = "оценочная цена" if c.get("price_imputed") else "цена"
+        reasons.append(f"{price_note} от {price:,} ₸ укладывается в бюджет {req.budget_kzt:,} ₸".replace(",", " "))
     if req.language and req.language in (c.get("languages") or []):
         reasons.append(f"язык работы: {req.language}")
     hours = c.get("max_hours")
@@ -105,3 +99,4 @@ def rank_and_explain(candidates: list[dict], req: FindRequest) -> list[dict]:
     if _ranker is None:
         raise RuntimeError("Call initialize_ranking(dataset) during server startup first")
     return _ranker.rank_and_explain(candidates, req)
+

@@ -1,6 +1,12 @@
 import unittest
 import numpy as np
-from ranking import FindRequest, Ranker, explain
+from app.ranking import FindRequest, Ranker, explain
+
+
+def request(event_format, budget_kzt, language=None, duration_hours=None):
+    return FindRequest(city="Алматы", event_date="2026-11-14", category="Музыканты",
+                       event_format=event_format, budget_kzt=budget_kzt,
+                       language=language, duration_hours=duration_hours)
 
 
 class Encoder:
@@ -15,9 +21,9 @@ class Encoder:
 class RankingTests(unittest.TestCase):
     def setUp(self):
         self.rows = [dict(id=i, description=d, price_from_kzt=100,
-                          languages=["RU"], max_hours=5)
+                          languages=["русский"], max_hours=5)
                      for i, d in [("b", "Живая музыка"), ("a", "Ведущий квиза")]]
-        self.req = FindRequest("Корпоратив", 200, "RU", 3)
+        self.req = request("Корпоратив", 200, "RU", 3)
         self.model = Encoder()
         self.ranker = Ranker(self.rows, self.model)
 
@@ -31,7 +37,7 @@ class RankingTests(unittest.TestCase):
         self.assertNotEqual(first[0]["explanation"], first[1]["explanation"])
 
     def test_no_invented_matches(self):
-        text = explain(self.rows[0], FindRequest("Свадьба", 0, "KZ", 8))
+        text = explain(self.rows[0], request("Свадьба", 0, "KZ", 8))
         self.assertNotIn("укладывается", text)
         self.assertNotIn("достаточно", text)
         self.assertNotIn("подходит по формату", text)
@@ -57,3 +63,4 @@ class RankingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

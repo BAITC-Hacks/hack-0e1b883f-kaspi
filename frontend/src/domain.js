@@ -37,7 +37,7 @@ export function validateSearch(raw) {
     const text = String(raw[key] ?? "").trim();
     if (!text && !required) continue;
     const number = Number(text);
-    if (!text || !Number.isFinite(number) || number <= 0) errors[key] = `${label}: введите число больше нуля.`;
+    if (!text || !Number.isFinite(number) || number <= 0 || (key === "budget_kzt" && !Number.isSafeInteger(number))) errors[key] = `${label}: введите ${key === "budget_kzt" ? "целое число" : "число"} больше нуля.`;
     else params[key] = number;
   }
   if (raw.language) {
@@ -57,7 +57,7 @@ export class InvalidResponseError extends Error {
 const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 const hasText = (value) => typeof value === "string" && value.trim().length > 0;
 
-// Validate the draft contract without selecting, sorting, coercing or repairing data.
+// Validate the backend response without selecting, sorting, coercing or repairing data.
 // Missing explanatory text is a visible contract warning, never fabricated content.
 export function inspectResponse(response) {
   const reject = (detail) => { throw new InvalidResponseError(detail); };
@@ -65,13 +65,13 @@ export function inspectResponse(response) {
   if (!["ok", "no_category_in_city", "no_match"].includes(response.status)) reject("Неизвестный статус ответа.");
   if (!Array.isArray(response.candidates)) reject("В ответе отсутствует список карточек.");
   if (!Number.isInteger(response.excluded_count) || response.excluded_count < 0) reject("Некорректное количество исключённых подрядчиков.");
-  if (response.status === "ok" && (response.candidates.length < 1 || response.candidates.length > 3)) reject("Успешный ответ должен содержать от одной до трёх карточек.");
+  if (response.status === "ok" && response.candidates.length < 1) reject("Успешный ответ должен содержать карточки.");
   if (response.status !== "ok" && response.candidates.length !== 0) reject("Карточки противоречат статусу пустого результата.");
   if (response.status === "no_category_in_city" && response.excluded_count !== 0) reject("Отсутствующая категория не может содержать исключённых подрядчиков.");
   if (response.status === "no_match" && response.excluded_count === 0) reject("Ответ сообщает о неподходящих подрядчиках, но их количество равно нулю.");
   const warnings = [];
   if (response.excluded_reasons !== undefined && (!Array.isArray(response.excluded_reasons) || !response.excluded_reasons.every(hasText))) reject("Причины исключения должны быть списком непустых строк.");
-  const needsReasons = response.status === "no_match" || (response.status === "ok" && response.candidates.length < 3);
+  const needsReasons = response.excluded_count > 0;
   if (response.excluded_reasons === undefined || (needsReasons && response.excluded_reasons.length === 0)) {
     warnings.push("Причины не переданы. Причину сокращённой или пустой подборки уточнить нельзя.");
   }
@@ -85,6 +85,9 @@ export function inspectResponse(response) {
     ids.add(candidate.id);
     if (typeof candidate.price_from_kzt !== "number" || !Number.isFinite(candidate.price_from_kzt) || candidate.price_from_kzt < 0) reject(`Некорректная цена в карточке ${index + 1}.`);
     if (typeof candidate.synthetic !== "boolean") reject(`Некорректный признак синтетического профиля в карточке ${index + 1}.`);
+    for (const flag of ["price_imputed", "city_imputed"]) {
+      if (candidate[flag] !== undefined && typeof candidate[flag] !== "boolean") reject(`Некорректный признак «${flag}» в карточке ${index + 1}.`);
+    }
     if (candidate.explanation !== undefined && typeof candidate.explanation !== "string") reject(`Некорректный формат объяснения в карточке ${index + 1}.`);
     if (!hasText(candidate.explanation)) warnings.push(`Карточка ${index + 1}: объяснение не передано.`);
   });

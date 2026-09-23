@@ -15,9 +15,6 @@ a { color: var(--green); text-underline-offset: 3px; }
 .brand-dot, h1 > span { color: #70964a; }
 .header-note { font-size: 12px; color: var(--muted); padding-left: 27px; border-left: 1px solid var(--line); }
 .phase-badge { font-size: 11px; font-weight: 650; letter-spacing: .03em; margin-left: auto; padding: 7px 12px; background: #e8ede3; border-radius: 30px; white-space: nowrap; }
-.mode-notice { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 24px; padding: 12px 16px; border: 1px solid #e8dfbb; background: #faf5e5; color: #6d592b; font-size: 12px; border-radius: 8px; line-height: 1.5; }
-.mode-notice > span:last-child { margin-left: auto; }
-.notice-dot { height: 6px; width: 6px; background: #927238; border-radius: 50%; flex-shrink: 0; }
 .intro { padding: 43px 0 36px; }
 .eyebrow { color: var(--green); font-size: 11px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; margin: 0 0 14px; }
 h1 { font-size: clamp(30px, 3.8vw, 45px); letter-spacing: -1.6px; line-height: 1.15; font-weight: 600; margin: 0; }
@@ -69,7 +66,6 @@ legend span { color: var(--muted); font-size: 10px; font-weight: 400; margin-lef
 .search-terms > div { display: flex; gap: 5px; padding: 7px 10px; font-size: 11px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 .search-terms dt { color: var(--muted); }
 .search-terms dd { margin: 0; font-weight: 550; }
-.mock-result-note { color: #6d592b; line-height: 1.6; font-size: 11px; margin: 12px 0 0; }
 .candidate-list { display: grid; gap: 14px; }
 .candidate-card { border: 1px solid var(--line); border-radius: 11px; padding: 21px 23px; background: #fff; overflow-wrap: anywhere; }
 .card-top { display: flex; align-items: flex-start; gap: 13px; }
@@ -92,16 +88,10 @@ legend span { color: var(--muted); font-size: 10px; font-weight: 400; margin-lef
 .technical-state .state-symbol { background: #f0ded3; color: #945d44; }
 .spinner { border: 2px solid #d6e0cd; border-top-color: var(--green); width: 28px; height: 28px; border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.dev-panel { margin: 36px 0 0; border-top: 1px solid var(--line); padding: 23px 0; display: flex; align-items: center; gap: 30px; justify-content: space-between; }
-.dev-panel .eyebrow { margin: 0 0 7px; font-size: 10px; color: var(--muted); }
-.dev-panel p:not(.eyebrow) { font-size: 11px; color: var(--muted); line-height: 1.6; max-width: 500px; margin: 0; }
-.dev-controls { display: flex; align-items: flex-end; gap: 10px; }
-.dev-controls .field { margin: 0; min-width: 200px; }
-.dev-controls label { font-size: 10px; }
 footer { padding: 25px 0 28px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; margin-top: 20px; color: #697468; font-size: 10px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .skip-link { position: absolute; top: -60px; left: 20px; padding: 12px; background: white; z-index: 10; }
 .skip-link:focus { top: 10px; }
-@media (max-width: 1050px) { .site-header, main, footer { width: calc(100% - 48px); } .workspace { grid-template-columns: 345px minmax(0, 1fr); gap: 24px; } .form-panel { padding: 20px; } .card-top { flex-wrap: wrap; } .price { margin-left: 48px; } .dev-panel { flex-wrap: wrap; } }
-@media (max-width: 760px) { .site-header, main, footer { width: calc(100% - 32px); } .site-header { min-height: 76px; gap: 10px; } .header-note { display: none; } .workspace { grid-template-columns: 1fr; gap: 23px; } .intro { padding: 32px 0 28px; } h1 { letter-spacing: -1px; } .desktop-break { display: none; } .intro-copy { font-size: 13px; } .mode-notice > span:last-child { margin-left: 0; } .results-heading { padding-top: 0; } .empty-state { min-height: 330px; padding: 26px 18px; } .dev-panel { margin-top: 26px; gap: 20px; } .dev-controls { width: 100%; flex-wrap: wrap; } .dev-controls .field { flex: 1; } .candidate-card { padding: 19px; } .card-top { gap: 10px; } .price { margin-left: 45px; } footer { gap: 20px; font-size: 9px; } }
+@media (max-width: 1050px) { .site-header, main, footer { width: calc(100% - 48px); } .workspace { grid-template-columns: 345px minmax(0, 1fr); gap: 24px; } .form-panel { padding: 20px; } .card-top { flex-wrap: wrap; } .price { margin-left: 48px; } }
+@media (max-width: 760px) { .site-header, main, footer { width: calc(100% - 32px); } .site-header { min-height: 76px; gap: 10px; } .header-note { display: none; } .workspace { grid-template-columns: 1fr; gap: 23px; } .intro { padding: 32px 0 28px; } h1 { letter-spacing: -1px; } .desktop-break { display: none; } .intro-copy { font-size: 13px; } .results-heading { padding-top: 0; } .empty-state { min-height: 330px; padding: 26px 18px; } .candidate-card { padding: 19px; } .card-top { gap: 10px; } .price { margin-left: 45px; } footer { gap: 20px; font-size: 9px; } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

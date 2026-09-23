@@ -7,10 +7,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements-dev.txt
 python -m unittest discover -s tests -v
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
-Open http://localhost:8000/docs → POST `/api/find` → Try it out:
+Open http://127.0.0.1:8001/docs → POST `/api/find` → Try it out:
 
 ```json
 {
@@ -58,6 +58,6 @@ Canonical code is in `app/`; tests in `tests/`. `requirments.txt` forwards to
 `requirements.txt` for compatibility with the initial repository. Exact tested
 package versions are recorded in `requirements.lock.txt`.
 
-There is no frontend in this repository. Swagger `/docs` provides an API testing
-form; a frontend can POST the example JSON to `/api/find` and render candidates.
-Unit/API tests use a fake encoder; separate verification uses the actual model.
+The frontend in `../frontend` sends requests to this API at port 8001. Swagger
+`/docs` also provides an API testing form. Unit/API tests use a fake encoder;
+separate verification uses the actual model.

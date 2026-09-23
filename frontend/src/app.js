@@ -1,11 +1,9 @@
 import { CITIES, EVENT_FORMATS, CATEGORIES, LANGUAGES, validateSearch, inspectResponse, InvalidResponseError, formatDate, formatNumber } from "./domain.js";
-import { MOCK_MODE, findContractors, setMockScenario } from "./api.js";
-import { SCENARIOS, getFixture } from "./fixtures.js";
+import { findContractors } from "./api.js";
 
 const $ = (id) => document.getElementById(id);
 const form = $("requirements");
 const content = $("result-content");
-const scenarioSelect = $("mock-scenario");
 const fields = ["city", "event_date", "event_format", "category", "budget_kzt", "duration_hours", "language"];
 let loading = false;
 
@@ -24,22 +22,6 @@ for (const [id, values] of [["city", CITIES], ["event_format", EVENT_FORMATS], [
     $(id).append(option);
   }
 }
-$("mode-notice").hidden = !MOCK_MODE;
-$("disconnected-notice").hidden = MOCK_MODE;
-$("dev-panel").hidden = !MOCK_MODE;
-for (const [key, scenario] of Object.entries(SCENARIOS)) {
-  const option = element("option", "", scenario.label);
-  option.value = key;
-  scenarioSelect.append(option);
-}
-scenarioSelect.addEventListener("change", () => setMockScenario(scenarioSelect.value));
-$("fill-example").addEventListener("click", () => {
-  const { example } = getFixture(scenarioSelect.value);
-  for (const key of fields) $(key).value = example[key] ?? "";
-  showValidation({});
-  $("live-status").textContent = "Пример заполнен. Нажмите «Подобрать подрядчиков».";
-  $("city").focus();
-});
 
 function state(title, description, kind = "initial") {
   const box = element("div", `empty-state ${kind === "technical" ? "technical-state" : ""}`);
@@ -53,7 +35,7 @@ function state(title, description, kind = "initial") {
 
 const initial = state("Подборка начинается с вашего события", "Укажите город, дату и пожелания. Здесь появятся варианты с объяснением для каждого подрядчика.");
 const steps = element("ol", "initial-steps");
-["Параметры", "До 3 вариантов", "Объяснения"].forEach((text, index) => {
+["Параметры", "Подрядчики", "Объяснения"].forEach((text, index) => {
   const item = element("li");
   item.append(element("span", "", String(index + 1)), document.createTextNode(text));
   steps.append(item);
@@ -78,7 +60,7 @@ form.addEventListener("input", (event) => {
   if (!$("validation-summary").hidden) showValidation(errors);
 });
 
-function showSubmitted(params, scenarioLabel) {
+function showSubmitted(params) {
   const summary = $("submitted-search");
   summary.replaceChildren(element("h3", "", "Параметры отправленного поиска"));
   const terms = element("dl", "search-terms");
@@ -95,7 +77,6 @@ function showSubmitted(params, scenarioLabel) {
     terms.append(pair);
   }
   summary.append(terms);
-  if (MOCK_MODE) summary.append(element("p", "mock-result-note", `Тестовый сценарий: «${scenarioLabel}». Ответ фиксирован и не вычислен по этим параметрам. Объяснения и причины — тестовый текст, не ответ ИИ.`));
   summary.hidden = false;
 }
 
@@ -108,9 +89,9 @@ function renderCard(candidate, index) {
   const identity = element("div");
   identity.append(element("h3", "", candidate.name), element("p", "candidate-meta", `${candidate.category} · ${candidate.city}`));
   if (candidate.synthetic) identity.append(element("span", "synthetic-badge", "Синтетический профиль из датасета"));
-  top.append(number, identity, element("p", "price", `Цена от ${formatNumber(candidate.price_from_kzt)} ₸`));
+  top.append(number, identity, element("p", "price", `${candidate.price_imputed ? "Оценочная цена от" : "Цена от"} ${formatNumber(candidate.price_from_kzt)} ₸`));
   const explanation = element("div", "explanation");
-  explanation.append(element("h4", "", MOCK_MODE ? "Объяснение · тестовый текст" : "Почему в подборке"));
+  explanation.append(element("h4", "", "Почему в подборке"));
   explanation.append(element("p", "", candidate.explanation?.trim() ? candidate.explanation : "Объяснение не передано. Основание рекомендации уточнить нельзя."));
   card.append(top, explanation);
   return card;
@@ -130,7 +111,7 @@ function renderReasons(response) {
 function renderResponse(response, warnings, params) {
   content.replaceChildren();
   if (response.status === "ok") {
-    $("result-count").textContent = `Найдено: ${response.candidates.length} из 3`;
+    $("result-count").textContent = `Найдено: ${response.candidates.length}`;
     const cards = element("div", "candidate-list");
     cards.dataset.state = "ok";
     response.candidates.forEach((candidate, index) => cards.append(renderCard(candidate, index)));
@@ -159,8 +140,6 @@ function renderResponse(response, warnings, params) {
 function setLoading(value) {
   loading = value;
   $("submit-button").disabled = value;
-  scenarioSelect.disabled = value;
-  $("fill-example").disabled = value;
   $("results-panel").setAttribute("aria-busy", String(value));
   $("submit-label").textContent = value ? "Подбираем…" : "Подобрать подрядчиков";
 }
@@ -181,9 +160,9 @@ form.addEventListener("submit", async (event) => {
   }
   const submitted = Object.freeze({ ...params });
   setLoading(true);
-  showSubmitted(submitted, SCENARIOS[scenarioSelect.value].label);
+  showSubmitted(submitted);
   $("result-count").textContent = "Подбираем…";
-  content.replaceChildren(state("Готовим подборку", MOCK_MODE ? "Загружаем выбранный тестовый сценарий." : "Ожидаем ответ.", "loading"));
+  content.replaceChildren(state("Готовим подборку", "Ожидаем ответ сервера.", "loading"));
   $("live-status").textContent = "Поиск начат.";
   try {
     const { response, warnings } = inspectResponse(await findContractors(submitted));

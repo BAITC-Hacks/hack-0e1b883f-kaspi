@@ -7,6 +7,25 @@ from test_ranking import Encoder
 
 
 class LanguageExplanationTests(unittest.TestCase):
+    def test_wedding_fallbacks_reference_distinct_source_details(self):
+        query = dict(city="Алматы", category="Ведущий", budget_kzt=1000000,
+                     event_format="свадьба", duration_hours=10, language="русский",
+                     event_date="2026-11-14")
+        with TestClient(create_app(encoder=Encoder())) as client:
+            response = client.post("/api/find", json=query)
+            self.assertEqual(response.status_code, 200)
+            candidates = {c["id"]: c for c in response.json()["candidates"]}
+            goku = candidates["HK-27222"]["explanation"]
+            emilia = candidates["HK-42352"]["explanation"]
+            self.assertIn("европейская подача, тонкий юмор", goku)
+            self.assertIn("Опыт ведения свадеб 13 лет", emilia)
+            evidence = [c["explanation"].split(". В описании", 1)[1]
+                        for c in candidates.values()]
+            self.assertEqual(len(evidence), len(set(evidence)))
+            for c in candidates.values():
+                self.assertLessEqual(len(c["explanation"].split(". ")), 2)
+                self.assertLess(len(c["explanation"]), 450)
+
     def test_dataset_languages_are_preserved_in_search_explanations(self):
         query = dict(city="Алматы", category="Ведущий", budget_kzt=1000000,
                      event_format="корпоратив", duration_hours=1, event_date="2026-11-14")

@@ -60,14 +60,56 @@ class Ranker:
                 raise ValueError("Unknown or changed contractor; reinitialize ranking at startup")
         with self._lock:
             query = self._query(req.event_format)
+        evidence = {}
+        used = set()
+        # Stable allocation also handles shared or identical marketing bios.
+        for c in sorted(candidates, key=lambda c: str(c["id"])):
+            options = description_evidence_options(c["description"], req.event_format)
+            if not options:
+                evidence[str(c["id"])] = ""
+                continue
+            detail = next((option for option in options if option not in used), None)
+            if detail is None:
+                detail = f"{options[0]} (профиль {c['id']})"
+                while detail in used:
+                    detail += " (другой профиль)"
+            used.add(detail)
+            evidence[str(c["id"])] = detail
         results = []
-        for c in candidates:
+        used_explanations = set()
+        for c in sorted(candidates, key=lambda c: str(c["id"])):
             score = float(np.clip(np.dot(self.embeddings[str(c["id"])] , query), -1, 1))
-            results.append({**c, "score": score, "explanation": explain(c, req)})
+            explanation = explain(c, req, evidence=evidence[str(c["id"])])
+            # If no description evidence exists, equal structured facts may tie.
+            if explanation in used_explanations:
+                explanation = f"{explanation.rstrip('.')} (профиль {c['id']})."
+                while explanation in used_explanations:
+                    explanation = explanation.rstrip('.') + " (другой профиль)."
+            used_explanations.add(explanation)
+            results.append({**c, "score": score,
+                            "explanation": explanation})
         return sorted(results, key=lambda c: (-c["score"], str(c["id"])))
 
 
-def description_relevance(description: str, event_format: str) -> str:
+def bounded_excerpt(clause: str) -> str:
+    """Treat length limits as targets; never cut through an unfinished clause."""
+    limit = min(len(" ".join(clause.split()[:12])), 160)
+    if len(clause) <= limit:
+        return clause
+    for boundary in reversed(list(re.finditer(r"[.!?—–]", clause[:limit + 1]))):
+        excerpt = clause[:boundary.start()].rstrip()
+        # A short lead-in such as "Totoro Golf Club –" is not a useful excerpt.
+        if len(excerpt.split()) >= 5:
+            return excerpt
+    boundary = re.search(r"[.!?]", clause[limit:])
+    if boundary:
+        return clause[:limit + boundary.start()].rstrip()
+    # Selection already splits at sentence endings, so the end of this fragment
+    # is the next boundary even though its terminal punctuation was removed.
+    return clause
+
+
+def description_evidence_options(description: str, event_format: str) -> list[str]:
     """Report bounded lexical evidence, without endorsing claims from the bio."""
     stopwords = {"для", "или", "как", "это", "при", "без", "под", "над", "the", "and", "for"}
     description_words = set(re.findall(r"[^\W\d_]+", description.casefold()))
@@ -75,11 +117,31 @@ def description_relevance(description: str, event_format: str) -> str:
     matches = [word for word in query_words
                if 3 <= len(word) <= 30 and word not in stopwords and word in description_words][:3]
     if matches:
-        return f"В описании найдены ключевые слова запроса: «{', '.join(matches)}»"
-    return "В описании нет точных ключевых слов запроса; ранжирование учитывает смысловую близость"
+        return [f"В описании найдены ключевые слова запроса: «{', '.join(matches)}»"]
+    # Extract a detail, not a claim that this clause caused the embedding score.
+    # Leave price, language and hours claims to the structured fields.
+    clauses = [" ".join(clause.split()).strip(" —:•«»")
+               for clause in re.split(r"[.!?;\n]+", description)]
+    clauses = [clause for clause in clauses if clause and not re.search(
+        r"\b(?:\w*язы[кч]\w*|русск\w*|казахск\w*|английск\w*|"
+        r"цен(?:а|ы|у|е|ой)|стоим\w*|тенге|час(?:а|ов|ы|у|ом)?|ч)\b|₸", clause, re.I)]
+    clauses.sort(key=lambda clause: not bool(re.search(
+        r"стиль|подач|юмор|специал|опыт|квиз|жив\w* музык", clause, re.I)))
+    options = []
+    for clause in clauses:
+        excerpt = bounded_excerpt(clause)
+        option = f"В описании отмечено: «{excerpt}»"
+        if option not in options:
+            options.append(option)
+    return options
 
 
-def explain(c: dict, req: FindRequest) -> str:
+def description_relevance(description: str, event_format: str) -> str:
+    options = description_evidence_options(description, event_format)
+    return options[0] if options else ""
+
+
+def explain(c: dict, req: FindRequest, *, evidence: str | None = None) -> str:
     reasons = []
     price = c.get("price_from_kzt")
     if price is not None and price <= req.budget_kzt:
@@ -95,11 +157,13 @@ def explain(c: dict, req: FindRequest) -> str:
     hours = c.get("max_hours")
     if req.duration_hours is not None and hours is not None and hours >= req.duration_hours:
         reasons.append(f"работает до {hours:g} ч — достаточно для запрошенных {req.duration_hours:g} ч")
-    evidence = description_relevance(c["description"], req.event_format)
+    if evidence is None:
+        evidence = description_relevance(c["description"], req.event_format)
     if reasons:
         facts = "; ".join(reasons)
-        return facts[0].upper() + facts[1:] + ". " + evidence + "."
-    return evidence + "."
+        text = facts[0].upper() + facts[1:] + "."
+        return text + " " + evidence + "." if evidence else text
+    return evidence + "." if evidence else f"Профиль исполнителя {c['id']}."
 
 
 _ranker: Ranker | None = None

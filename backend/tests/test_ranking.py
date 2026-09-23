@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from app.ranking import FindRequest, Ranker, description_relevance, explain
+from app.ranking import FindRequest, Ranker, bounded_excerpt, description_relevance, explain
 
 
 def request(event_format, budget_kzt, language=None, duration_hours=None):
@@ -34,6 +34,7 @@ class RankingTests(unittest.TestCase):
         self.assertEqual([c["id"] for c in first], ["a", "b"])
         self.assertEqual(len(self.model.calls), 2)
         self.assertNotIn("score", self.rows[0])
+        self.assertNotEqual(first[0]["explanation"], first[1]["explanation"])
         self.assertTrue(all(len(c["explanation"].split(". ")) <= 2 for c in first))
 
     def test_no_invented_matches(self):
@@ -41,8 +42,7 @@ class RankingTests(unittest.TestCase):
         self.assertNotIn("укладывается", text)
         self.assertNotIn("достаточно", text)
         self.assertNotIn("подходит по формату", text)
-        self.assertIn("нет точных ключевых слов запроса", text)
-        self.assertNotIn("Живая музыка", text)
+        self.assertIn("В описании отмечено: «Живая музыка»", text)
 
     def test_long_bio_is_replaced_by_short_keyword_evidence(self):
         bio = "Лучший ведущий города. Работаю только на английском. " * 100 + "Веду корпоратив."
@@ -66,12 +66,83 @@ class RankingTests(unittest.TestCase):
         row = {**self.rows[0], "event_formats": ["свадьба"]}
         text = explain(row, self.req)
         self.assertNotIn("указан в профиле", text)
-        self.assertIn("нет точных ключевых слов запроса", text)
+        self.assertIn("В описании отмечено: «Живая музыка»", text)
+
+    def test_shared_excerpt_uses_another_description_detail(self):
+        rows = [{**self.rows[0], "id": "a", "description": "Живая музыка. Джазовый вокал."},
+                {**self.rows[0], "id": "b", "description": "Живая музыка. Скрипичное трио."}]
+        results = Ranker(rows, Encoder()).rank_and_explain(rows, self.req)
+        self.assertIn("«Живая музыка»", results[0]["explanation"])
+        self.assertIn("«Скрипичное трио»", results[1]["explanation"])
+        self.assertNotIn("профиль", results[1]["explanation"])
+
+    def test_identical_bios_still_have_unique_stable_evidence(self):
+        rows = [{**self.rows[0], "id": str(i)} for i in range(4)]
+        ranker = Ranker(rows, Encoder())
+        results = ranker.rank_and_explain(rows, self.req)
+        evidence = [c["explanation"].split(". В описании", 1)[1] for c in results]
+        self.assertEqual(len(set(evidence)), len(rows))
+        self.assertTrue(all("Живая музыка" in text for text in evidence))
+        self.assertEqual(results, ranker.rank_and_explain(list(reversed(rows)), self.req))
+
+    def test_fallback_is_short_and_skips_unverified_working_conditions(self):
+        detail = "Мой стиль — добрый юмор и лёгкая импровизация с гостями на протяжении всего праздника"
+        bio = "Работаю на английском языке за 500 тенге. " + detail + "."
+        text = description_relevance(bio, "свадьба")
+        self.assertIn("Мой стиль", text)
+        self.assertNotIn("английском", text)
+        self.assertNotIn("500", text)
+        self.assertIn(detail, text)
+        self.assertNotIn("…", text)
+        self.assertNotIn(bio, text)
+
+    def test_excerpt_cuts_at_preceding_clause_boundary(self):
+        complete = "Веду камерные праздники с живой музыкой"
+        self.assertEqual(bounded_excerpt(complete + " — " + "дополнение " * 20), complete)
+
+    def test_excerpt_extends_past_limit_to_sentence_end(self):
+        complete = " ".join(["слово"] * 14)
+        self.assertEqual(bounded_excerpt(complete + ". Следующая мысль."), complete)
+
+    def test_excerpt_keeps_sentence_when_early_boundary_is_too_short(self):
+        complete = "Totoro Golf Club – атмосферный гольф-клуб и ресторан у подножия Заилийского Алатау в Алматы"
+        self.assertEqual(bounded_excerpt(complete), complete)
+        self.assertEqual(description_relevance(complete + ". Другая мысль.", "свадьба"),
+                         f"В описании отмечено: «{complete}»")
+
+    def test_character_limit_does_not_split_a_word(self):
+        complete = "Очень " + "длинное" * 30
+        self.assertEqual(bounded_excerpt(complete), complete)
 
     def test_stale_and_unknown_candidates(self):
         for updates in [{"description": "changed"}, {"id": "unknown"}]:
             with self.assertRaises(ValueError):
                 self.ranker.rank_and_explain([{**self.rows[0], **updates}], self.req)
+
+    def test_no_usable_excerpt_omits_description_sentence(self):
+        row = {**self.rows[0], "description": "Работаю на английском языке. Цена 500 тенге."}
+        text = explain(row, self.req)
+        self.assertIn("укладывается в бюджет", text)
+        self.assertIn("язык работы: русский", text)
+        self.assertNotIn("описании", text)
+        self.assertNotIn("английском", text)
+        self.assertNotIn("непроверенных", text)
+        self.assertEqual(len(text.split(". ")), 1)
+        self.assertFalse(text.endswith(".."))
+
+    def test_condition_filter_does_not_match_inside_unrelated_words(self):
+        for detail in ["Участник фестиваля", "Дарю счастье гостям", "Сцена и живые выступления"]:
+            with self.subTest(detail=detail):
+                self.assertIn(detail, description_relevance(detail, "свадьба"))
+
+    def test_no_excerpt_and_identical_facts_remain_distinct(self):
+        rows = [{**self.rows[0], "id": str(i), "description": "Работаю 5 часов."}
+                for i in range(3)]
+        ranker = Ranker(rows, Encoder())
+        results = ranker.rank_and_explain(rows, self.req)
+        self.assertEqual(len({c["explanation"] for c in results}), 3)
+        self.assertTrue(all("описании" not in c["explanation"] for c in results))
+        self.assertEqual(results, ranker.rank_and_explain(list(reversed(rows)), self.req))
 
     def test_all_languages_without_requested_language(self):
         row = {**self.rows[0], "languages": ["русский", "казахский"]}

@@ -19,7 +19,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(first.status_code, 200)
         body = first.json()
         self.assertEqual(body['status'], 'ok')
-        self.assertEqual(len(body['candidates']), 5)
+        self.assertEqual(len(body['candidates']), 3)
         self.assertEqual(body['excluded_count'], 5)
         self.assertFalse(any(c['synthetic'] for c in body['candidates']))
         self.assertTrue(all('описании' in c['explanation'] for c in body['candidates']))

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import re
 from threading import RLock
 from typing import Any
 
@@ -66,25 +67,39 @@ class Ranker:
         return sorted(results, key=lambda c: (-c["score"], str(c["id"])))
 
 
+def description_relevance(description: str, event_format: str) -> str:
+    """Report bounded lexical evidence, without endorsing claims from the bio."""
+    stopwords = {"для", "или", "как", "это", "при", "без", "под", "над", "the", "and", "for"}
+    description_words = set(re.findall(r"[^\W\d_]+", description.casefold()))
+    query_words = dict.fromkeys(re.findall(r"[^\W\d_]+", event_format.casefold()))
+    matches = [word for word in query_words
+               if 3 <= len(word) <= 30 and word not in stopwords and word in description_words][:3]
+    if matches:
+        return f"В описании найдены ключевые слова запроса: «{', '.join(matches)}»"
+    return "В описании нет точных ключевых слов запроса; ранжирование учитывает смысловую близость"
+
+
 def explain(c: dict, req: FindRequest) -> str:
     reasons = []
     price = c.get("price_from_kzt")
     if price is not None and price <= req.budget_kzt:
         price_note = "оценочная цена" if c.get("price_imputed") else "цена"
         reasons.append(f"{price_note} от {price:,} ₸ укладывается в бюджет {req.budget_kzt:,} ₸".replace(",", " "))
-    if req.language and req.language in (c.get("languages") or []):
+    languages = c.get("languages") or []
+    if req.language and req.language in languages:
         reasons.append(f"язык работы: {req.language}")
+    elif req.language is None and languages:
+        reasons.append(f"языки работы: {', '.join(languages)}")
+    if req.event_format.casefold() in [value.casefold() for value in c.get("event_formats", [])]:
+        reasons.append(f"формат «{req.event_format}» указан в профиле")
     hours = c.get("max_hours")
     if req.duration_hours is not None and hours is not None and hours >= req.duration_hours:
         reasons.append(f"работает до {hours:g} ч — достаточно для запрошенных {req.duration_hours:g} ч")
-    # Include the actual source evidence, even when price/language are identical.
-    # Do not claim a format match merely because cosine similarity was calculated.
-    description = " ".join(c["description"].split())
-    evidence = f"В описании исполнителя: «{description}»"
+    evidence = description_relevance(c["description"], req.event_format)
     if reasons:
         facts = "; ".join(reasons)
         return facts[0].upper() + facts[1:] + ". " + evidence + "."
-    return "Основание семантического сравнения — описание исполнителя: «" + description + "»."
+    return evidence + "."
 
 
 _ranker: Ranker | None = None
@@ -99,4 +114,3 @@ def rank_and_explain(candidates: list[dict], req: FindRequest) -> list[dict]:
     if _ranker is None:
         raise RuntimeError("Call initialize_ranking(dataset) during server startup first")
     return _ranker.rank_and_explain(candidates, req)
-

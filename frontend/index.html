@@ -5,22 +5,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#322538">
     <meta name="description" content="Подбор подрядчиков для мероприятий в Казахстане.">
-    <title>Подбор подрядчиков - Событие</title>
+    <title>revent — люди для вашего события</title>
     <link rel="stylesheet" href="./styles.css">
     <script type="module" src="./src/app.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#requirements">Перейти к параметрам</a>
     <header class="site-header">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">R</span>revent<span class="brand-dot">.</span></div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M16 2c2 8 6 12 14 14-8 2-12 6-14 14C14 22 10 18 2 16 10 14 14 10 16 2Z" fill="currentColor"/></svg></span>revent<span class="brand-dot">.</span></div>
+      <p class="header-note">Люди, которые создают события</p>
+      <span class="header-location"><span aria-hidden="true"></span>Сделано для Казахстана</span>
     </header>
     <main>
       <section class="intro" aria-labelledby="page-title">
-        <p class="eyebrow">Меньше поиска. Больше ясности.</p>
-        <h1 id="page-title">Найдите тех, кто подходит<br class="desktop-break"> вашему событию<span>.</span></h1>
-        <p class="intro-copy">Расскажите о мероприятии - получите подходящих подрядчиков<br class="desktop-break"> с понятным объяснением для каждого.</p>
+        <div class="intro-text">
+          <p class="eyebrow"><span aria-hidden="true">✳</span> Меньше поиска. Больше ясности.</p>
+          <h1 id="page-title">Найдите тех, кто подходит <em>вашему событию.</em></h1>
+          <p class="intro-copy">Расскажите о мероприятии — получите подходящих подрядчиков с понятным объяснением для каждого.</p>
+        </div>
+        <div class="intro-art" aria-hidden="true">
+          <svg viewBox="0 0 440 350" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="227" cy="174" r="140" stroke="#D9D1CA" stroke-dasharray="3 7"/>
+            <path d="M18 235C72 313 307 347 415 211" stroke="#AAA18F"/>
+            <g transform="rotate(8 246 167)">
+              <rect x="118" y="32" width="245" height="278" rx="16" fill="#E8E1D5"/>
+              <rect x="108" y="22" width="245" height="278" rx="16" fill="#322538"/>
+              <path d="M128 67H333M128 249H333" stroke="#796B7E" stroke-width=".7"/>
+              <text x="128" y="50" fill="#F9F6EF" font-family="Arial, sans-serif" font-size="10" letter-spacing="2">REVENT / ВАШЕ СОБЫТИЕ</text>
+              <g transform="translate(230 156)" stroke="#DCEBA2" stroke-width="1.4">
+                <ellipse rx="36" ry="73"/><ellipse rx="36" ry="73" transform="rotate(30)"/>
+                <ellipse rx="36" ry="73" transform="rotate(60)"/><ellipse rx="36" ry="73" transform="rotate(90)"/>
+                <ellipse rx="36" ry="73" transform="rotate(120)"/><ellipse rx="36" ry="73" transform="rotate(150)"/>
+                <circle r="9" fill="#DCEBA2" stroke="none"/>
+              </g>
+              <text x="128" y="275" fill="#F9F6EF" font-family="Georgia, serif" font-size="19" font-style="italic">Повод быть вместе.</text>
+              <path d="m311 266 14 0 0 14m-14 0 14-14" stroke="#DCEBA2" stroke-width="1.5"/>
+            </g>
+            <g transform="rotate(-9 113 272)">
+              <path d="M29 239a10 10 0 0 1 10-10h158a10 10 0 0 1 10 10v17a12 12 0 0 0 0 24v17a10 10 0 0 1-10 10H39a10 10 0 0 1-10-10v-17a12 12 0 0 0 0-24Z" fill="#DCEBA2"/>
+              <path d="M169 239v57" stroke="#859350" stroke-dasharray="3 4"/>
+              <text x="49" y="251" fill="#525A36" font-family="Arial, sans-serif" font-size="8" letter-spacing="1.6">ВСЁ НАЧИНАЕТСЯ</text>
+              <text x="48" y="282" fill="#322538" font-family="Georgia, serif" font-size="23" font-style="italic">с вашей идеи</text>
+              <path d="m181 262 10 0 0 10m-10 0 10-10" stroke="#322538" stroke-width="1.5"/>
+            </g>
+            <path d="M74 84c2 16 10 24 26 26-16 2-24 10-26 26-2-16-10-24-26-26 16-2 24-10 26-26Z" fill="#B47759"/>
+            <circle cx="385" cy="127" r="5" fill="#B47759"/>
+          </svg>
+        </div>
       </section>
+      <div class="workspace-intro" aria-hidden="true"><span>От идеи — к вашей команде</span><span>Всё важное в одной подборке <span class="workspace-arrow">↙</span></span></div>
       <div class="workspace">
         <section class="form-panel" aria-labelledby="form-title">
           <div class="section-heading"><span class="step">01</span><h2 id="form-title">Ваше мероприятие</h2></div>
@@ -81,6 +116,7 @@
         </section>
       </div>
     </main>
+    <footer><span class="footer-brand">revent.</span><p>У каждого события — свои люди.</p><span class="footer-note">Создавайте моменты, которые остаются.</span></footer>
     <p class="sr-only" id="live-status" role="status" aria-live="polite" aria-atomic="true"></p>
     <noscript><p>Для работы формы включите JavaScript в браузере.</p></noscript>
   </body>
